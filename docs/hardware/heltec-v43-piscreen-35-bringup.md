@@ -53,3 +53,19 @@ Reference supplied by user in `meshcore-display-reference.tar.gz`, kept outside 
 - repeatable PlatformIO build, hardware test checklist, radio regression.
 
 No pull requests. No main-branch changes.
+
+
+## Hardware bring-up results — 27–28 October 2026
+
+These supersede the earlier unpowered/unwired research status above.
+
+- **Physical board**: Heltec V4.3 S3R2, ESP32-S3; runtime confirmed PSRAM **2,097,152 bytes** and flash **16,777,216 bytes**.
+- **Power**: TFT Raspberry header physical 1 -> 3V3, 2 -> 5V, 6 -> GND; backlight illuminated. Continuity: 2↔4, 1↔17, 6↔9. Unpowered resistance: 2↔1 OL, 2↔6 ~10MOhm, 1↔6 OL. Power budget and long-term thermal stability still require validation.
+- **Tested signal map**: Raspberry physical pin 18 -> GPIO40 (LCD D/C), 19 -> GPIO33 (MOSI), 21 -> GPIO48 (touch MISO), 22 -> GPIO41 (RESET), 23 -> GPIO47 (SCLK), 24 -> GPIO35 (LCD CS), 26 -> GPIO6 (touch CS); touch IRQ pin 11 unconnected.
+- **Panel proven**: Standalone ESP32-S3 Arduino HSPI driver, SPI mode 0 at 2 MHz; PiScreen register-byte convention is two SPI bytes `00 xx`; pixel data is RGB565 two bytes. Init sequence tested: B0/11/3A/36/C2/C5/E0/E1/E2/11/29. `MADCTL=0x28` and GRAM window **480×320** completely fill the visible display with changing colours. A 320×480 GRAM window only filled part of the panel.
+- **TFT_eSPI caveat**: Its initial ILI9486 configuration reset with watchdog; later it ran but did not draw despite wiring continuity. Do not substitute it for the tested PiScreen-specific 16-bit command transport.
+- **Touch**: XPT2046 SPI polling code was supplied for testing, but real calibration samples and five-point confirmation were not recorded yet. Treat touch as **unverified**, not proven.
+- **Initial integration commit**: `include/WadaPiScreen35.h` adds an **opt-in** `WADA_PISCREEN_35` class, preserving tested initialization and fillRect. It is not yet attached to WadaMesh DISPLAY_CLASS / LVGL; existing ST7789/CHSC6x environment stays unchanged.
+- **Critical conflicts**: The existing Heltec expansion target uses GPIO35 for expansion key, GPIO6 for buzzer, GPIO40/41 in GNSS-related functionality. A new dedicated environment must disable conflicting uses instead of inheriting them silently.
+- **Next gates**: integrate panel with WadaMesh display abstraction; then XPT2046 polling, raw data verification, 5-point landscape calibration persisted with recovery/reset; finally LVGL 480×320 and SX1262 regression tests. No PR, never modify main.
+
