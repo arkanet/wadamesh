@@ -1,7 +1,7 @@
 #pragma once
 // XPT2046 on the tested external PiScreen SPI wiring (Heltec V4.3 S3R2).
 // Hardware touch readings still require physical validation.
-#if defined(WADA_PISCREEN_35)
+#if defined(WADA_XPT2046)
 #include <Arduino.h>
 #include <SPI.h>
 
