@@ -1,0 +1,59 @@
+name: Heltec TFT baseline build
+
+on:
+  push:
+    branches:
+      - 'TFT-SPI-480×320'
+    paths:
+      - '.github/workflows/heltec-tft-baseline.yml'
+      - 'src/**'
+      - 'lib/**'
+      - 'variants/**'
+      - 'platformio.ini'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baseline-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compile:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Prepare PlatformIO
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/pio-venv"
+          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install "platformio==6.1.18"
+          echo "$RUNNER_TEMP/pio-venv/bin" >> "$GITHUB_PATH"
+      - name: Compile heltec_v4_tft_companion_radio_usb_tcp_touch
+        shell: bash
+        run: |
+          set -o pipefail
+          pio run -e 'heltec_v4_tft_companion_radio_usb_tcp_touch' 2>&1 | tee firmware-build.log
+      - name: Save logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-build-log
+          path: firmware-build.log
+          if-no-files-found: ignore
+      - name: Save firmware
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-firmware
+          path: |
+            .pio/build/heltec_v4_tft_companion_radio_usb_tcp_touch/*.bin
+            .pio/build/heltec_v4_tft_companion_radio_usb_tcp_touch/*.elf
+            .pio/build/heltec_v4_tft_companion_radio_usb_tcp_touch/*.map
+          if-no-files-found: warn
