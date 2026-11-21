@@ -1,0 +1,83 @@
+name: Firmware build (stocacchione)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pio_env:
+        description: PlatformIO environment (exact name from platformio.ini)
+        required: true
+        type: string
+      clean_build:
+        description: Clean build first
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firmware-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compile:
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 120
+    steps:
+      - name: Validate environment input
+        env:
+          PIO_ENV: ${{ inputs.pio_env }}
+        shell: bash
+        run: |
+          [[ "$PIO_ENV" =~ ^[a-zA-Z0-9_-]+$ ]] || { echo "Invalid PlatformIO environment"; exit 2; }
+      - name: Checkout source and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Set up isolated PlatformIO
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/pio-venv"
+          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install "platformio==6.1.18"
+          echo "$RUNNER_TEMP/pio-venv/bin" >> "$GITHUB_PATH"
+      - name: Print environment
+        run: |
+          pio --version
+          python3 --version
+          pio project config --json-output > platformio-config.json
+      - name: Compile firmware
+        shell: bash
+        env:
+          PIO_ENV: ${{ inputs.pio_env }}
+          CLEAN_BUILD: ${{ inputs.clean_build }}
+        run: |
+          set -o pipefail
+          if [[ "$CLEAN_BUILD" == "true" ]]; then
+            pio run -e "$PIO_ENV" -t clean 2>&1 | tee clean-build.log
+          fi
+          pio run -e "$PIO_ENV" 2>&1 | tee firmware-build.log
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-build-logs
+          path: |
+            firmware-build.log
+            clean-build.log
+            platformio-config.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload compiled firmware
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-output
+          path: |
+            .pio/build/**/*.bin
+            .pio/build/**/*.elf
+            .pio/build/**/*.map
+          if-no-files-found: warn
+          retention-days: 14
