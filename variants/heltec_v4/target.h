@@ -20,6 +20,8 @@ extern "C" void set_boot_phase(int phase);
     // V4-R8 + Expansion Kit V2: TFT on hardware SPI (shared with micro-SD). Must
     // come before the HELTEC_LORA_V4_TFT branch — the R8 build defines both.
     #include "LGFXDisplay.h"
+#elif defined(HELTEC_LORA_V4_R2_ILI9488)
+    #include "ILI9488LCDDisplay.h"
 #elif defined(HELTEC_LORA_V4_TFT)
     #include <helpers/ui/ST7789LCDDisplay.h>
 #endif
