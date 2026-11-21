@@ -11,7 +11,7 @@ struct BootTrace {
 HeltecV4Board board;
 
 #if defined(P_LORA_SCLK)
-  #if defined(HELTEC_LORA_V4_R8)
+  #if defined(HELTEC_LORA_V4_R8) || defined(HELTEC_LORA_V4_R2_ILI9488)
     static SPIClass spi(HSPI);   // R8: LoRa on HSPI; the TFT + micro-SD own FSPI (SPI2)
   #else
     static SPIClass spi;
@@ -47,7 +47,13 @@ bool radio_init() {
   fallback_clock.begin();
   rtc_clock.begin(Wire);
 
-#if defined(HELTEC_LORA_V4_R8)
+#if defined(HELTEC_LORA_V4_R2_ILI9488)
+  // P02: LCD + later SD/touch share FSPI; park other devices before LCD init.
+  // SX1262 is assigned separate HSPI to avoid RF/display SPI contention.
+  pinMode(PIN_SD_CS, OUTPUT); digitalWrite(PIN_SD_CS, HIGH);
+  pinMode(PIN_EXT_TOUCH_CS, OUTPUT); digitalWrite(PIN_EXT_TOUCH_CS, HIGH);
+#endif
+#if defined(HELTEC_LORA_V4_R8) || defined(HELTEC_LORA_V4_R2_ILI9488)
   // V4-R8 + Expansion Kit V2: bring up the shared TFT/SD bus on FSPI (SPI2) so
   // LovyanGFX (bus_shared=true) finds an already-begun bus and skips a double
   // spi_bus_initialize, and so the micro-SD mount (main.cpp, CS=3) can share it.
