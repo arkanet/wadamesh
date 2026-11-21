@@ -33,7 +33,7 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/pio-venv"
           "$RUNNER_TEMP/pio-venv/bin/python" -m pip install --upgrade pip
-          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install "platformio==6.1.18"
+          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install "platformio>=6.2.0,<7"
           echo "$RUNNER_TEMP/pio-venv/bin" >> "$GITHUB_PATH"
       - name: Compile heltec_v4_tft_companion_radio_usb_tcp_touch
         shell: bash
