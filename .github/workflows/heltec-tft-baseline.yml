@@ -18,7 +18,7 @@ permissions:
 
 concurrency:
   group: baseline-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   compile:
@@ -44,6 +44,10 @@ jobs:
           set -o pipefail
           pio run -e 'heltec_v4_tft_companion_radio_usb_tcp_touch' 2>&1 | tee firmware-build.log
       - name: Save logs
+        # Artefact hosting can stall independently of a successful compiler.
+        # Keep compile verdict authoritative; bound uploads and surface warnings.
+        continue-on-error: true
+        timeout-minutes: 3
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -51,6 +55,10 @@ jobs:
           path: firmware-build.log
           if-no-files-found: ignore
       - name: Save firmware
+        # Artefact hosting can stall independently of a successful compiler.
+        # Keep compile verdict authoritative; bound uploads and surface warnings.
+        continue-on-error: true
+        timeout-minutes: 3
         if: success()
         uses: actions/upload-artifact@v4
         with:
@@ -83,6 +91,10 @@ jobs:
           set -o pipefail
           pio run -e heltec_v4_r2_ili9488_p02 2>&1 | tee firmware-p02.log
       - name: Save P02 logs
+        # Artefact hosting can stall independently of a successful compiler.
+        # Keep compile verdict authoritative; bound uploads and surface warnings.
+        continue-on-error: true
+        timeout-minutes: 3
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -90,6 +102,10 @@ jobs:
           path: firmware-p02.log
           if-no-files-found: ignore
       - name: Save P02 firmware for review (DO NOT FLASH)
+        # Artefact hosting can stall independently of a successful compiler.
+        # Keep compile verdict authoritative; bound uploads and surface warnings.
+        continue-on-error: true
+        timeout-minutes: 3
         if: success()
         uses: actions/upload-artifact@v4
         with:
