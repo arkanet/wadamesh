@@ -11,6 +11,10 @@
 class ILI9488LCDDisplay : public DisplayDriver {
   lgfx::Bus_SPI _bus;
   lgfx::Panel_ILI9488 _panel;
+#if defined(P03_XPT2046_TOUCH)
+  // Optional shared SPI2 touch controller (actual IC marking must be verified).
+  lgfx::Touch_XPT2046 _touch;
+#endif
   lgfx::LGFX_Device _lcd;
   bool _isOn = false;
   uint16_t _color = 0xFFFF;
@@ -35,4 +39,6 @@ public:
   void writePixelsRGB565(int x, int y, int w, int h, const uint16_t* pixels);
   void setDisplayRotation(uint8_t rotation);
   void panelSleep(bool sleep);
+  // Uncalibrated 12-bit measurements for on-device calibration (P03 only).
+  bool sampleTouchRaw(uint16_t* rawX, uint16_t* rawY);
 };
