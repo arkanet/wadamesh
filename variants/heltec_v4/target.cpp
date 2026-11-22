@@ -52,6 +52,7 @@ bool radio_init() {
 #if defined(HELTEC_LORA_V4_R2_ILI9488)
   // P02: LCD + later SD/touch share FSPI; park other devices before LCD init.
   // SX1262 is assigned separate HSPI to avoid RF/display SPI contention.
+  pinMode(PIN_TFT_CS, OUTPUT); digitalWrite(PIN_TFT_CS, HIGH);
   pinMode(PIN_SD_CS, OUTPUT); digitalWrite(PIN_SD_CS, HIGH);
   pinMode(PIN_EXT_TOUCH_CS, OUTPUT); digitalWrite(PIN_EXT_TOUCH_CS, HIGH);
 #endif

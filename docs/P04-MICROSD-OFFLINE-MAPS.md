@@ -12,6 +12,28 @@ pio run -e heltec_v4_r2_ili9488_p04
 
 P02 (LCD), P03 (touch) and the legacy ST7789 environment stay separate.
 
+## Mount and recovery follow-up
+
+* ILI9488 and P04 UI guards now live directly in `UITask.cpp`. Builds no
+  longer rewrite that source with `p02_patch_uitask.py`.
+* Explicit and background mounts use `P04_SD_SPI_HZ` (default 4 MHz,
+  compile-time range 400 kHz–4 MHz). Recovery does not raise the clock or
+  restart the shared SPI2 peripheral. The reported operating clock is updated
+  after successful mounts.
+* P04 defers an unmounted card's mount while the existing SD lifecycle
+  predicate reports active consumers. An already-live mount is adopted
+  without invalidating their handles. This uses the existing worker guards;
+  it is not proof of hardware concurrency or a new atomic VFS lock.
+* All three external chip selects are parked HIGH before SPI initialization;
+  conflicting LCD/touch/SD chip-select definitions fail compilation.
+* The ten-second failure backoff and file-manager retry checks handle
+  `millis()` rollover, including a deadline wrapping to zero.
+* Host regression: `python3 test/p04_sd_mount/run.py`. It compiles the actual
+  production mount/recovery functions with fake SD/Arduino dependencies at
+  4 MHz and 1 MHz, covering missing/unready cards, busy consumers, live mount
+  adoption, background recovery, explicit retries and timer wrap. CI runs it
+  before the four firmware builds. It does not validate physical hardware.
+
 ## Scope / reuse
 
 * Reuses WadaMesh's **existing** map library: JPEG tile folders and

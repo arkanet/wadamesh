@@ -53,5 +53,13 @@ mesh::LocalIdentity radio_new_identity();
 // P04 opt-in: SD and LovyanGFX use the same pre-initialised Arduino SPI2/FSPI
 // host, with independent SD/LCD/touch CS pins. Not electrically validated.
 #if defined(P04_ILI9488_SD)
+#ifndef P04_SD_SPI_HZ
+#define P04_SD_SPI_HZ 4000000
+#endif
+static_assert(P04_SD_SPI_HZ >= 400000 && P04_SD_SPI_HZ <= 4000000,
+              "P04 microSD clock must stay between 400 kHz and 4 MHz");
+static_assert(PIN_SD_CS != PIN_TFT_CS && PIN_SD_CS != PIN_EXT_TOUCH_CS &&
+              PIN_TFT_CS != PIN_EXT_TOUCH_CS,
+              "LCD, touch and microSD require independent chip selects");
 SPIClass* heltecV4R2SharedSPI();
 #endif

@@ -82,7 +82,7 @@ static void* wadaMp3Scratch() { return s_wada_mp3_scratch; }
 #endif
 #if defined(HAS_CROWPANEL_35)
   #include <CrowPanel35SD.h>
-#elif defined(HAS_TDECK_GT911) || defined(HAS_TDECK_PRO) || defined(HAS_THINKNODE_M9) || defined(HELTEC_LORA_V4_R8)
+#elif defined(HAS_TDECK_GT911) || defined(HAS_TDECK_PRO) || defined(HAS_THINKNODE_M9) || defined(HELTEC_LORA_V4_R8) || defined(P04_ILI9488_SD)
   #include <SD.h>             // microSD — T-Deck/M9 on the LoRa SPI, V4-R8 on the TFT SPI
   #include "SdFastClock.h"    // post-mount operating-clock raise (SD_SPI_FAST_HZ boards)
   #include "sd_diskio.h"      // internal Arduino-SD drive helpers (sdcard_init / sd_*_raw)
@@ -250,6 +250,8 @@ static_assert(ChannelSenderSplit::kMaxWireName >= (size_t)UITask::MAX_SENDER_NAM
     #endif
   #elif defined(HAS_CROWPANEL_P4_101)
     #include <EK79007Display.h>              // EK79007 MIPI-DSI IPS, 1024x600, on the CrowPanel P4 10.1
+  #elif defined(HELTEC_LORA_V4_R2_ILI9488)
+    #include <ILI9488LCDDisplay.h>
   #else
     #include <helpers/ui/ST7789LCDDisplay.h>
   #endif
@@ -324,6 +326,8 @@ static_assert(ChannelSenderSplit::kMaxWireName >= (size_t)UITask::MAX_SENDER_NAM
     extern DISPLAY_CLASS display;            // RM69A10Display (AMOLED) or HI8561Display (LCD) — set in CMakeLists
   #elif defined(HAS_CROWPANEL_P4_101)
     extern DISPLAY_CLASS display;            // EK79007Display
+  #elif defined(HELTEC_LORA_V4_R2_ILI9488)
+    extern ILI9488LCDDisplay display;
   #else
     extern ST7789LCDDisplay display;
   #endif
@@ -25920,6 +25924,10 @@ static bool      s_fm_img_fs = false;       // viewer is in full-screen mode
 static bool          s_sd_mounted   = false;   // microSD mount state
 static uint64_t      s_sd_size      = 0;       // card capacity (bytes)
 static unsigned long s_sd_retry_after_ms = 0;  // don't re-probe SD before this (backoff)
+static bool sdMountRetryPending(uint32_t now) {
+  // Signed subtraction keeps the 10-second backoff valid across millis() wrap.
+  return s_sd_retry_after_ms && (int32_t)(now - (uint32_t)s_sd_retry_after_ms) < 0;
+}
 #if defined(TLORA_PAGER)
 static uint32_t      s_sd_data_warn_next_ms = 0;
 static inline uint32_t sdDataWarnDeadline(uint32_t now) {
@@ -27401,6 +27409,8 @@ static uint8_t sdDriveNumber() { return SdDriveAccess::of(SD); }
 static inline SPIClass* sdSharedSPI() { return tloraPagerSharedSPI(); }
 #elif defined(HELTEC_LORA_V4_R8)
 static inline SPIClass* sdSharedSPI() { return heltecV4R8SharedSPI(); }   // V4-R8: micro-SD shares the TFT FSPI bus (CS=3)
+#elif defined(P04_ILI9488_SD)
+static inline SPIClass* sdSharedSPI() { return heltecV4R2SharedSPI(); } // R2 LCD+touch+SD SPI2; LoRa SPI3
 #elif defined(HAS_THINKNODE_M9)
 static inline SPIClass* sdSharedSPI() { return m9SharedSPI(); }
 #else
@@ -27474,8 +27484,8 @@ static bool fmSdTryMount() {
   // uiDataFsReady, WAV chimes) — without this gate every such call re-walks
   // the multi-second mount ladder while the card is out, freezing the UI.
   // Explicit user retries clear the backoff first (fmSdMountOrFormatCb).
-  if (s_sd_retry_after_ms && millis() < s_sd_retry_after_ms) return false;
-#if defined(TLORA_PAGER) || defined(HAS_CROWPANEL_35)
+  if (sdMountRetryPending((uint32_t)millis())) return false;
+#if defined(TLORA_PAGER) || defined(HAS_CROWPANEL_35) || defined(P04_ILI9488_SD)
   if (sdRuntimeLifecycleBusy()) return false;
 #endif
 #if defined(TLORA_PAGER)
@@ -27496,6 +27506,10 @@ static bool fmSdTryMount() {
   bool begin_ok = false;
   const bool mounted = sdPagerBeginWithPowerRecovery(spi, &begin_ok);
   const uint32_t mounted_hz = 4000000;
+#elif defined(P04_ILI9488_SD)
+  // Single conservative attempt (default 4 MHz); keep TFT/touch bus live.
+  const uint32_t mounted_hz = P04_SD_SPI_HZ;
+  const bool mounted = sdBeginTracked(spi, mounted_hz);
 #else
   // Cold microSD cards — especially the first mount after boot — often fail
   // the initial SD.begin and historically only recovered after a physical
@@ -27569,6 +27583,9 @@ static bool fmSdTryMount() {
     s_sd_mounted = true;
     s_sd_size = SD.cardSize();
     s_sd_retry_after_ms = 0;                    // clear any prior backoff
+#if defined(P04_ILI9488_SD)
+    g_sd_operating_hz = mounted_hz;
+#endif
     markSdIo();                                 // mount touched the card -> blip the LED
 #if defined(TLORA_PAGER)
     // History stays pinned to the backend loaded during UITask::begin(); a
@@ -27589,7 +27606,8 @@ static bool fmSdTryMount() {
   SD.end();                                     // clean up on failure
 #endif
   sdMountDiagSetMounted(false, 0);
-  s_sd_retry_after_ms = millis() + 10000;       // back off so we don't hammer the card
+  const uint32_t retry_at = (uint32_t)millis() + 10000;
+  s_sd_retry_after_ms = retry_at ? retry_at : 1; // zero means no backoff
   return false;
 }
 static void fmSdUnmount() {
@@ -27644,7 +27662,7 @@ static void fmSdClickCb(lv_event_t* e) {
   if (s_sd_mounted) fmOpenStorage(&SD, "SD", "/");
 }
 
-#if defined(TLORA_PAGER) || defined(HAS_CROWPANEL_35)
+#if defined(TLORA_PAGER) || defined(HAS_CROWPANEL_35) || defined(P04_ILI9488_SD)
 // These ports offer only a non-destructive mount retry. Formatting stays on
 // the computer, rather than using the hardware-SPI formatter on an untested bus.
 static void fmSdRetryMountCb(lv_event_t* e) {
@@ -29203,7 +29221,7 @@ static void fmShowRoots() {
   // Probe the SD only when not in a mount-backoff window, so a persistently
   // unmountable card doesn't re-grind the full retry ladder on every render of
   // this page. Tapping the row below (fmSdMountOrFormatCb) bypasses the gate.
-  if ((s_sd_mounted || millis() >= s_sd_retry_after_ms) && fmSdTryMount()) {
+  if ((s_sd_mounted || !sdMountRetryPending((uint32_t)millis())) && fmSdTryMount()) {
     char sdl[48], cs[16];
     fmFmtSize64(s_sd_size, cs, sizeof cs);
     snprintf(sdl, sizeof sdl, TR("SD card   %s   (hold: format)"), cs);
@@ -29216,8 +29234,8 @@ static void fmShowRoots() {
     fmStyleRow(sd, COLOR_SUB);
     lv_obj_add_event_cb(sd, fmSdMountOrFormatCb, LV_EVENT_CLICKED, nullptr);
   }
-#elif defined(HAS_CROWPANEL_35)
-  if ((s_sd_mounted || millis() >= s_sd_retry_after_ms) && fmSdTryMount()) {
+#elif defined(HAS_CROWPANEL_35) || defined(P04_ILI9488_SD)
+  if ((s_sd_mounted || !sdMountRetryPending((uint32_t)millis())) && fmSdTryMount()) {
     char sdl[48], cs[16];
     fmFmtSize64(s_sd_size, cs, sizeof cs);
     snprintf(sdl, sizeof sdl, TR("SD card   %s"), cs);
@@ -29233,7 +29251,7 @@ static void fmShowRoots() {
   // The card-detect line makes "not present" unambiguous, unlike the T-Deck (no detect
   // pin at all) -- so unlike its always-shown "tap to mount/format" fallback row, a bare
   // pager just shows no SD row at all rather than a row that can never succeed.
-  if (board.sdCardPresent() && (s_sd_mounted || millis() >= s_sd_retry_after_ms) &&
+  if (board.sdCardPresent() && (s_sd_mounted || !sdMountRetryPending((uint32_t)millis())) &&
       fmSdTryMount() && s_sd_mounted) {
     char sdl[48], cs[16];
     fmFmtSize64(s_sd_size, cs, sizeof cs);
@@ -76727,6 +76745,10 @@ void UITask::begin(DisplayDriver* display, SensorManager* sensors, NodePrefs* no
 #elif defined(HAS_SENSECAP_INDICATOR)
   g_lv.disp_drv.hor_res  = 480;
   g_lv.disp_drv.ver_res  = 480;
+#elif defined(HELTEC_LORA_V4_R2_ILI9488)
+  // External ILI9488: native portrait 320x480; landscape 480x320.
+  g_lv.disp_drv.hor_res = s_remote_mode ? (s_remote_landscape ? 400 : 240) : (ui_landscape ? 480 : 320);
+  g_lv.disp_drv.ver_res = s_remote_mode ? (s_remote_landscape ? 240 : 400) : (ui_landscape ? 320 : 480);
 #elif defined(HAS_WIO_TRACKER_L2)
   // Native 320x240 landscape (UI rotation 3), or 240x320 in the portraits (#698).
   g_lv.disp_drv.hor_res  = ui_landscape ? 320 : 240;
@@ -77960,8 +77982,8 @@ bool UITask::setDeviceTimeFromSystemClock() {
 #endif
 }
 
-#if defined(HELTEC_LORA_V4_R8)
-// ---- V4-R8 panel sleep (anti burn-in) --------------------------------------
+#if defined(HELTEC_LORA_V4_R8) || defined(HELTEC_LORA_V4_R2_ILI9488)
+// ---- LovyanGFX panel sleep (anti burn-in) --------------------------------------
 // The R8 (which defines HELTEC_LORA_V4_TFT too) drives its ST7789 with LovyanGFX
 // on the shared FSPI/SPI2 bus, NOT the Adafruit driver on HSPI. So it must NOT use
 // the HSPI s_cmd_spi shim below: that shim's SPIClass(HSPI)->begin(16,-1,15,-1)
@@ -80763,6 +80785,12 @@ static void sdHealthTick() {
     // SD-rail power cycle before retrying; the display/radio bus stays live.
     bool begin_ok = false;
     const bool remounted = sdPagerBeginWithPowerRecovery(spi, &begin_ok);
+#elif defined(P04_ILI9488_SD)
+    // Same one-attempt policy as the explicit mount; never raise the clock
+    // or restart SPI2 beneath the live LCD/touch drivers.
+    SD.end();
+    const bool remounted = sdBeginTracked(spi, P04_SD_SPI_HZ);
+    if (remounted) g_sd_operating_hz = P04_SD_SPI_HZ;
 #else
     SD.end();
     bool remounted = sdBeginTracked(spi, 4000000);
@@ -81948,7 +81976,7 @@ void UITask::loop() {
       if (!s_sd_mounted) {
         // Only re-probe after the backoff window — repeatedly re-initing an
         // unmountable card spikes current / churns the bus and can reset the board.
-        if (!sdRuntimeLifecycleBusy() && now >= s_sd_retry_after_ms && fmSdTryMount()) {
+        if (!sdRuntimeLifecycleBusy() && !sdMountRetryPending((uint32_t)now) && fmSdTryMount()) {
           showAlert(TR("SD card inserted"), 1500);
 #if CAP_SD || defined(TLORA_PAGER)
           if (!s_ui_data_fs) uiDataFsReady();

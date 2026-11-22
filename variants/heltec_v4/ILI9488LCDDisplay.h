@@ -2,7 +2,7 @@
 #pragma once
 // P02 compile-only external 3.5" ILI9488 SPI LCD, Heltec V4.3 R2.
 // Do not flash or solder until the P01 shared-harness electrical gate passes.
-// Touch and microSD will be added in separate follow-up steps.
+// P03 enables provisional XPT2046 touch; P04 adds shared-bus microSD.
 #include <helpers/ui/DisplayDriver.h>
 
 #define LGFX_USE_V1

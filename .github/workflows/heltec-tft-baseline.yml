@@ -7,8 +7,8 @@ on:
     paths:
       - '.github/workflows/heltec-tft-baseline.yml'
       - 'src/**'
-      - 'scripts/build/p02_patch_uitask.py'
       - 'lib/**'
+      - 'test/p04_sd_mount/**'
       - 'variants/**'
       - 'platformio.ini'
   workflow_dispatch:
@@ -167,6 +167,8 @@ jobs:
         with:
           submodules: recursive
           persist-credentials: false
+      - name: Test P04 SD mount, backoff and recovery on host
+        run: python3 test/p04_sd_mount/run.py
       - name: Prepare PlatformIO
         shell: bash
         run: |

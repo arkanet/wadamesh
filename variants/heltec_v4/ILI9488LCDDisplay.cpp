@@ -75,10 +75,15 @@ bool ILI9488LCDDisplay::begin() {
   digitalWrite(PIN_TFT_LEDA_CTL, HIGH);
 #endif
   _isOn = true;
-  Serial.printf("[P02/P03] ILI9488 external LCD: %dx%d portrait, SPI=%u Hz (touch=%s, SD disabled)\\n",
+  Serial.printf("[ILI9488] %dx%d portrait, LCD SPI=%u Hz, touch=%s, SD=%s\n",
                 width(), height(), (unsigned)ILI9488_SPI_WRITE_HZ,
 #if defined(P03_XPT2046_TOUCH)
-                "XPT2046 provisional"
+                "XPT2046 provisional",
+#else
+                "disabled",
+#endif
+#if defined(P04_ILI9488_SD)
+                "enabled, mount on demand"
 #else
                 "disabled"
 #endif
