@@ -62,41 +62,34 @@ changes = [
 if env.get("PIOENV") == "heltec_v4_r2_ili9488_p04":
     changes.extend([
         (
-            '#elif defined(HAS_TDECK_GT911) || defined(HAS_TDECK_PRO) || defined(HAS_THINKNODE_M9) || defined(HELTEC_LORA_V4_R8)\\n  #include <SD.h>',
-            '#elif defined(HAS_TDECK_GT911) || defined(HAS_TDECK_PRO) || defined(HAS_THINKNODE_M9) || defined(HELTEC_LORA_V4_R8) || defined(P04_ILI9488_SD)\\n  #include <SD.h>',
+            '#elif defined(HAS_TDECK_GT911) || defined(HAS_TDECK_PRO) || defined(HAS_THINKNODE_M9) || defined(HELTEC_LORA_V4_R8)\n  #include <SD.h>',
+            '#elif defined(HAS_TDECK_GT911) || defined(HAS_TDECK_PRO) || defined(HAS_THINKNODE_M9) || defined(HELTEC_LORA_V4_R8) || defined(P04_ILI9488_SD)\n  #include <SD.h>',
         ),
         (
-            '#elif defined(HELTEC_LORA_V4_R8)\\nstatic inline SPIClass* sdSharedSPI() { return heltecV4R8SharedSPI(); }   // V4-R8: micro-SD shares the TFT FSPI bus (CS=3)',
-            '#elif defined(HELTEC_LORA_V4_R8)\\nstatic inline SPIClass* sdSharedSPI() { return heltecV4R8SharedSPI(); }   // V4-R8: micro-SD shares the TFT FSPI bus (CS=3)\\n'
-            '#elif defined(P04_ILI9488_SD)\\n'
+            '#elif defined(HELTEC_LORA_V4_R8)\nstatic inline SPIClass* sdSharedSPI() { return heltecV4R8SharedSPI(); }   // V4-R8: micro-SD shares the TFT FSPI bus (CS=3)',
+            '#elif defined(HELTEC_LORA_V4_R8)\nstatic inline SPIClass* sdSharedSPI() { return heltecV4R8SharedSPI(); }   // V4-R8: micro-SD shares the TFT FSPI bus (CS=3)\n'
+            '#elif defined(P04_ILI9488_SD)\n'
             'static inline SPIClass* sdSharedSPI() { return heltecV4R2SharedSPI(); } // R2 LCD+touch+SD SPI2; LoRa SPI3',
         ),
         (
-            'const bool mounted = sdPagerBeginWithPowerRecovery(spi, &begin_ok);\\n  const uint32_t mounted_hz = 4000000;\\n#else',
-            'const bool mounted = sdPagerBeginWithPowerRecovery(spi, &begin_ok);\\n  const uint32_t mounted_hz = 4000000;\\n'
-            '#elif defined(P04_ILI9488_SD)\\n'
-            '  // Single conservative 4 MHz attempt; never reset shared TFT/touch bus.\\n'
-            '  const uint32_t mounted_hz = 4000000;\\n'
-            '  const bool mounted = sdBeginTracked(spi, mounted_hz);\\n#else',
+            'const bool mounted = sdPagerBeginWithPowerRecovery(spi, &begin_ok);\n  const uint32_t mounted_hz = 4000000;\n#else',
+            'const bool mounted = sdPagerBeginWithPowerRecovery(spi, &begin_ok);\n  const uint32_t mounted_hz = 4000000;\n'
+            '#elif defined(P04_ILI9488_SD)\n'
+            '  // Single conservative 4 MHz attempt; never reset shared TFT/touch bus.\n'
+            '  const uint32_t mounted_hz = 4000000;\n'
+            '  const bool mounted = sdBeginTracked(spi, mounted_hz);\n#else',
         ),
         (
-            '#if defined(TLORA_PAGER) || defined(HAS_CROWPANEL_35)\\n// These ports offer only a non-destructive mount retry.',
-            '#if defined(TLORA_PAGER) || defined(HAS_CROWPANEL_35) || defined(P04_ILI9488_SD)\\n'
+            '#if defined(TLORA_PAGER) || defined(HAS_CROWPANEL_35)\n// These ports offer only a non-destructive mount retry.',
+            '#if defined(TLORA_PAGER) || defined(HAS_CROWPANEL_35) || defined(P04_ILI9488_SD)\n'
             '// These ports offer only a non-destructive mount retry.',
         ),
         (
-            '#elif defined(HAS_CROWPANEL_35)\\n  if ((s_sd_mounted || millis() >= s_sd_retry_after_ms) && fmSdTryMount()) {',
-            '#elif defined(HAS_CROWPANEL_35) || defined(P04_ILI9488_SD)\\n'
+            '#elif defined(HAS_CROWPANEL_35)\n  if ((s_sd_mounted || millis() >= s_sd_retry_after_ms) && fmSdTryMount()) {',
+            '#elif defined(HAS_CROWPANEL_35) || defined(P04_ILI9488_SD)\n'
             '  if ((s_sd_mounted || millis() >= s_sd_retry_after_ms) && fmSdTryMount()) {',
         ),
-        (
-            '#if defined(HAS_TDECK_GT911) || defined(HAS_TDECK_PRO) || defined(HAS_THINKNODE_M9) || defined(HELTEC_LORA_V4_R8)\\n  // Prefer the SD card',
-            '#if defined(HAS_TDECK_GT911) || defined(HAS_TDECK_PRO) || defined(HAS_THINKNODE_M9) || defined(HELTEC_LORA_V4_R8)\\n  // Prefer the SD card',
-        ),
     ])
-    # The last tuple above is intentionally a no-op and must not run: it
-    # exists solely for future regression comparisons; drop it now.
-    changes.pop()
 
 count = 0
 for previous, replacement in changes:
