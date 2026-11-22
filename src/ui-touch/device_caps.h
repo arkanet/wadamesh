@@ -169,6 +169,19 @@
   #define CAP_OTA          1
   #define CAP_LOCK_SCREEN  1
 
+#elif defined(P04_ILI9488_SD)     // ===== Heltec V4.3 R2 + external ILI9488/XPT2046/microSD =====
+  // Experimental SPI2 shared bus; NO electrical/hardware approval.
+  // SD appears as a card and map tiles / PNG PMTiles come from the existing
+  // WadaMesh engine. No SD-backed identity/prefs migration in main.cpp.
+  #define CAP_TOUCH        1
+  #define CAP_ROTATABLE    1   // native 320x480 portrait; provisional touch calibration
+  #define CAP_LARGE_SCREEN 0   // flash/PSRAM-constrained R2, preserve compact UI
+  #define CAP_SD           1   // Arduino SD over FSPI/SPI2, CS=43 (candidate only)
+  #define CAP_FILESYSTEM   1   // existing map library and SD file browser
+  #define CAP_GPS          1
+  #define CAP_OTA          1
+  #define CAP_LOCK_SCREEN  0
+
 #elif defined(HELTEC_LORA_V4_R8)      // ===== Heltec WiFi LoRa 32 V4-R8 (ESP32-S3R8, 8 MB PSRAM) =====
   // Same board family + panel as the V4 TFT (the build also defines
   // HELTEC_LORA_V4_TFT to reuse all its UI code); the deltas are 8 MB octal
