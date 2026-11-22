@@ -2,7 +2,7 @@
 // P02: compile-only external ILI9488 LCD has no confirmed resistive touch IC.
 // Preserve the existing LVGL touch API without probing the CHSC6x I2C bus.
 // Replace this shim with a validated SPI touch driver during P03.
-#if defined(HELTEC_LORA_V4_R2_ILI9488) && defined(ESP32)
+#if defined(HELTEC_LORA_V4_R2_ILI9488) && !defined(P03_XPT2046_TOUCH) && defined(ESP32)
 #include "HeltecV4CapTouch.h"
 #include <helpers/ui/MomentaryButton.h>
 
