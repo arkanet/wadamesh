@@ -71,6 +71,7 @@ jobs:
 
   p02-ili9488:
     name: P02 / ILI9488 320x480 compile-only
+    needs: [p03-xpt2046]
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 120
     steps:
@@ -112,5 +113,46 @@ jobs:
           name: p02-ili9488-untested-do-not-flash
           # P02 is compile-only; keep the review artifact minimal.
           path: .pio/build/heltec_v4_r2_ili9488_p02/firmware.bin
+          compression-level: 0
+          if-no-files-found: warn
+
+  p03-xpt2046:
+    name: P03 / XPT2046 touch + ILI9488 (compile-only)
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Prepare PlatformIO
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/pio-venv"
+          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install "platformio>=6.2.0,<7"
+          echo "$RUNNER_TEMP/pio-venv/bin" >> "$GITHUB_PATH"
+      - name: Compile optional XPT2046 touch firmware (NO FLASH)
+        shell: bash
+        run: |
+          set -o pipefail
+          pio run -e heltec_v4_r2_ili9488_p03 2>&1 | tee firmware-p03.log
+      - name: Save P03 compiler log
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: p03-xpt2046-build-log
+          path: firmware-p03.log
+          if-no-files-found: ignore
+      - name: Save P03 BIN for review (DO NOT FLASH)
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: p03-xpt2046-untested-do-not-flash
+          path: .pio/build/heltec_v4_r2_ili9488_p03/firmware.bin
           compression-level: 0
           if-no-files-found: warn
