@@ -37,6 +37,8 @@ ClockFloorRTC        rtc_clock(fallback_clock);
 #ifdef DISPLAY_CLASS
   #if defined(HELTEC_LORA_V4_R8)
     DISPLAY_CLASS display(&board.periph_power);   // LGFXDisplay claims Vext(40) on turnOn
+  #elif defined(HELTEC_LORA_V4_R2_ILI9488)
+    DISPLAY_CLASS display; // P02 external panel has a no-argument constructor
   #else
     DISPLAY_CLASS display(NULL);
   #endif
