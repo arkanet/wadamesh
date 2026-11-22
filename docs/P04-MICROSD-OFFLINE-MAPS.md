@@ -83,6 +83,10 @@ tile server; respect attribution and dataset licensing.
    Meshtastic and DarkMesh builds.
 
 Flash budget is tight: P03 used **3,886,381 / 4,063,232 bytes** (95.6%).
-P04 must pass link-size check. If it exceeds flash capacity, prioritize
-removing duplicated UI features over increasing partition sizes or
-silently disabling safety or map functionality.
+P04 build **passed** GitHub Actions compilation in run #45026910121:
+**3,961,105 / 4,063,232 bytes** (97.5% flash), **123,552 bytes** reported
+RAM (5.9% of 2,097,152). Available application flash is just
+**102,127 bytes**. This is a compile/link result, not a field measurement.
+Further UI/SD additions must be size-budgeted. Prefer removing duplicated
+features over increasing partition sizes or silently disabling safety or
+map functionality. P03/P02/ST7789 regression jobs execute after P04.
