@@ -42,6 +42,23 @@ ILI9488LCDDisplay::ILI9488LCDDisplay() : DisplayDriver(320, 480) {
   panel.dlen_16bit = false; // panel takes 18-bit SPI pixels; LGFX converts RGB565
   panel.bus_shared = true; // required for later SD/touch SPI integration
   _panel.config(panel);
+#if defined(P03_XPT2046_TOUCH)
+  // Both devices use FSPI/SPI2. LGFX serializes touch transactions with
+  // the display's SPI bus (independent chip selects and a shared bus lock).
+  // P03 is opt-in until the controller IC and MISO tri-state are confirmed.
+  auto touch = _touch.config();
+  touch.spi_host = SPI2_HOST;
+  touch.pin_sclk = PIN_TFT_SCL;
+  touch.pin_mosi = PIN_TFT_SDA;
+  touch.pin_miso = PIN_TFT_MISO;
+  touch.pin_cs = PIN_EXT_TOUCH_CS;
+  touch.pin_int = -1; // optional T_IRQ not wired in candidate harness
+  touch.freq = 1000000;
+  touch.bus_shared = true;
+  touch.offset_rotation = 0;
+  _touch.config(touch);
+  _panel.setTouch(&_touch);
+#endif
   _lcd.setPanel(&_panel);
 }
 
@@ -58,8 +75,14 @@ bool ILI9488LCDDisplay::begin() {
   digitalWrite(PIN_TFT_LEDA_CTL, HIGH);
 #endif
   _isOn = true;
-  Serial.printf("[P02] ILI9488 external LCD: %dx%d portrait, SPI=%u Hz (touch/SD disabled)\\n",
-                width(), height(), (unsigned)ILI9488_SPI_WRITE_HZ);
+  Serial.printf("[P02/P03] ILI9488 external LCD: %dx%d portrait, SPI=%u Hz (touch=%s, SD disabled)\\n",
+                width(), height(), (unsigned)ILI9488_SPI_WRITE_HZ,
+#if defined(P03_XPT2046_TOUCH)
+                "XPT2046 provisional"
+#else
+                "disabled"
+#endif
+                );
   return true;
 }
 
@@ -107,5 +130,19 @@ void ILI9488LCDDisplay::setDisplayRotation(uint8_t rotation) {
 void ILI9488LCDDisplay::panelSleep(bool sleep) {
   if (sleep) { _lcd.sleep(); delay(5); }
   else       { _lcd.wakeup(); delay(6); }
+}
+bool ILI9488LCDDisplay::sampleTouchRaw(uint16_t* rawX, uint16_t* rawY) {
+#if defined(P03_XPT2046_TOUCH)
+  if (!_isOn) return false;
+  lgfx::touch_point_t point;
+  if (!_lcd.getTouchRaw(&point, 1) || point.x < 0 || point.y < 0) return false;
+  if (rawX) *rawX = static_cast<uint16_t>(point.x);
+  if (rawY) *rawY = static_cast<uint16_t>(point.y);
+  return true;
+#else
+  (void)rawX;
+  (void)rawY;
+  return false;
+#endif
 }
 #endif // HELTEC_LORA_V4_R2_ILI9488
