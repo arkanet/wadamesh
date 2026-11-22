@@ -118,6 +118,7 @@ jobs:
 
   p03-xpt2046:
     name: P03 / XPT2046 touch + ILI9488 (compile-only)
+    needs: [p04-sd-maps]
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 120
     steps:
@@ -154,5 +155,46 @@ jobs:
         with:
           name: p03-xpt2046-untested-do-not-flash
           path: .pio/build/heltec_v4_r2_ili9488_p03/firmware.bin
+          compression-level: 0
+          if-no-files-found: warn
+
+  p04-sd-maps:
+    name: P04 / external microSD offline maps (compile-only)
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Prepare PlatformIO
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/pio-venv"
+          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/pio-venv/bin/python" -m pip install "platformio>=6.2.0,<7"
+          echo "$RUNNER_TEMP/pio-venv/bin" >> "$GITHUB_PATH"
+      - name: Compile P04 SPI2 microSD and offline maps (NO FLASH)
+        shell: bash
+        run: |
+          set -o pipefail
+          pio run -e heltec_v4_r2_ili9488_p04 2>&1 | tee firmware-p04.log
+      - name: Preserve P04 build log
+        if: always()
+        continue-on-error: true
+        timeout-minutes: 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: p04-microsd-maps-build-log
+          path: firmware-p04.log
+          if-no-files-found: ignore
+      - name: Preserve P04 firmware (DO NOT FLASH)
+        if: success()
+        continue-on-error: true
+        timeout-minutes: 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: p04-microsd-maps-do-not-flash
+          path: .pio/build/heltec_v4_r2_ili9488_p04/firmware.bin
           compression-level: 0
           if-no-files-found: warn
