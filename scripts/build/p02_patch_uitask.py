@@ -14,8 +14,11 @@ from pathlib import Path
 
 Import("env")  # noqa: F821  -- PlatformIO/SCons runtime
 
-if env.get("PIOENV") != "heltec_v4_r2_ili9488_p02":
-    raise RuntimeError("P02 UITask patch executed in an unexpected build environment")
+if env.get("PIOENV") not in (
+    "heltec_v4_r2_ili9488_p02",
+    "heltec_v4_r2_ili9488_p03",
+):
+    raise RuntimeError("External ILI9488 UITask patch executed in an unrelated build")
 
 source = Path(env.subst("$PROJECT_DIR")) / "src/ui-touch/UITask.cpp"
 s = source.read_text(encoding="utf-8")
