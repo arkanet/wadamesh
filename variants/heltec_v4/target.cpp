@@ -86,3 +86,9 @@ SPIClass* heltecV4R8SharedSPI() {
 }
 #endif
 
+
+#if defined(P04_ILI9488_SD)
+SPIClass* heltecV4R2SharedSPI() {
+  return &SPI;  // SPI2 (FSPI), begun in radio_init(), NOT the LoRa HSPI bus
+}
+#endif
