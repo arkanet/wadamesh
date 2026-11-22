@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/heltec-tft-baseline.yml'
       - 'src/**'
+      - 'scripts/build/p02_patch_uitask.py'
       - 'lib/**'
       - 'variants/**'
       - 'platformio.ini'
@@ -54,10 +55,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: baseline-firmware
-          path: |
-            .pio/build/heltec_v4_tft_companion_radio_usb_tcp_touch/*.bin
-            .pio/build/heltec_v4_tft_companion_radio_usb_tcp_touch/*.elf
-            .pio/build/heltec_v4_tft_companion_radio_usb_tcp_touch/*.map
+          # Avoid large ELF/MAP uploads: the previous run compiled successfully
+          # but upload-artifact stalled after 16 MiB on this self-hosted runner.
+          path: .pio/build/heltec_v4_tft_companion_radio_usb_tcp_touch/firmware.bin
+          compression-level: 0
           if-no-files-found: warn
 
   p02-ili9488:
@@ -93,8 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: p02-ili9488-untested-do-not-flash
-          path: |
-            .pio/build/heltec_v4_r2_ili9488_p02/*.bin
-            .pio/build/heltec_v4_r2_ili9488_p02/*.elf
-            .pio/build/heltec_v4_r2_ili9488_p02/*.map
+          # P02 is compile-only; keep the review artifact minimal.
+          path: .pio/build/heltec_v4_r2_ili9488_p02/firmware.bin
+          compression-level: 0
           if-no-files-found: warn
