@@ -49,3 +49,9 @@ mesh::LocalIdentity radio_new_identity();
   SPIClass* heltecV4R8SharedSPI();
 #endif
 
+
+// P04 opt-in: SD and LovyanGFX use the same pre-initialised Arduino SPI2/FSPI
+// host, with independent SD/LCD/touch CS pins. Not electrically validated.
+#if defined(P04_ILI9488_SD)
+SPIClass* heltecV4R2SharedSPI();
+#endif
