@@ -21,6 +21,8 @@ concurrency:
 
 jobs:
   compile:
+    # Run stable ST7789 regression after experimental P02 has compiled.
+    needs: [p02-ili9488]
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 120
     steps:
@@ -60,7 +62,6 @@ jobs:
 
   p02-ili9488:
     name: P02 / ILI9488 320x480 compile-only
-    needs: [compile]
     runs-on: [self-hosted, Linux, X64]
     timeout-minutes: 120
     steps:
