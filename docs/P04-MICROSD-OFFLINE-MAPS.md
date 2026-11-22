@@ -112,3 +112,25 @@ RAM (5.9% of 2,097,152). Available application flash is just
 Further UI/SD additions must be size-budgeted. Prefer removing duplicated
 features over increasing partition sizes or silently disabling safety or
 map functionality. P03/P02/ST7789 regression jobs execute after P04.
+
+
+## Verified follow-up build — 22 November 2026
+
+Implementation commit: `2043d07d34e11134261edef3f1080599b9e544fc`.
+[GitHub Actions run #45030472530](https://github.com/arkanet/wadamesh/actions/runs/45030472530)
+completed successfully, including both host-test clock configurations and all
+four sequential firmware compilations.
+
+| Environment | Result | Application bytes / 4,063,232 | Static RAM bytes |
+| --- | --- | ---: | ---: |
+| `heltec_v4_r2_ili9488_p04` | SUCCESS | 3,961,329 | 123,552 |
+| `heltec_v4_r2_ili9488_p03` | SUCCESS | 3,886,377 | 119,784 |
+| `heltec_v4_r2_ili9488_p02` | SUCCESS | 3,882,525 | 119,720 |
+| `heltec_v4_tft_companion_radio_usb_tcp_touch` | SUCCESS | 3,836,389 | 119,660 |
+
+P04 leaves **101,903 bytes** of application flash, a **224-byte** increase over
+its previous successful build. Partitions and feature selection are unchanged.
+These are linker figures, not runtime memory peaks. Firmware BIN artifacts
+and compiler logs were uploaded successfully for all four environments.
+Electrical acceptance, flashing, real SD/LCD/touch arbitration and concurrent
+LoRa RX/TX remain untested on hardware.
